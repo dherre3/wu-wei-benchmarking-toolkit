@@ -24,7 +24,7 @@ var knownOpts = {
   'skip-output-verification': Boolean,
   'root': String,
   'verbose': Boolean
-}
+};
 var shortHands = {
   'b': ['--benchmark'],
   'bu': ['--build'],
@@ -38,9 +38,9 @@ var shortHands = {
   'p': ['--platform'],
   'r': ['--root'],
   'v': ['--verbose']
-}
+};
 
-var parsed = nopt(knownOpts, shortHands)
+var parsed = nopt(knownOpts, shortHands);
 if (!parsed.root) {
   console.log('fatal: No benchmarking suite root directory provided')
   process.exit(1)
@@ -138,8 +138,9 @@ configLib.config(suiteRoot, function (err, config) {
   shelljs.rm('-rf', path.join(wuRunTmpDir, '*'))
 
   runConfigs.forEach(function (runConfig) {
-    runConfig.times = []
-    runConfig.outputs = []
+    runConfig.times = [];
+    runConfig.outputs = [];
+    runConfig.cpuAvgLoad = [];
 
     console.log('-------------- ' + runConfig.benchmark['short-name'] +
       ',' + runConfig.implementation['short-name'] +
@@ -174,19 +175,20 @@ configLib.config(suiteRoot, function (err, config) {
       if (parsed.verbose) {
         console.log('************** Iteration ' + i + ' ************')
       }
-      let silentState = shelljs.config.silent
+      var silentState = shelljs.config.silent
       shelljs.config.silent = true
       shelljs.pushd(iterationDir)
       shelljs.config.silent = silentState
 
-      var output = configLib.executeRun(runConfig, parsed)
-
+      var runOutput = configLib.executeRun(runConfig, parsed);
+      var output = runOutput.output;
       shelljs.config.silent = true
       shelljs.popd()
       shelljs.config.silent = silentState
-
+      fs.appendFileSync(runConfig.benchmark['short-name']+runConfig.implementation['short-name']+".csv",`${output.time},${output.cpuUsage}\n`);
       runConfig.times.push(output.time)
-      runConfig.outputs.push(output)
+      runConfig.outputs.push(output);
+      runConfig.cpuAvgLoad.push(runOutput.cpuAvgLoad);
     }
 
     var toWrite = configLib.deepcopy(run)

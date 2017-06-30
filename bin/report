@@ -18,12 +18,14 @@ var knownOpts = {
   'run': [String, Array],
   'slowdown': String,
   'speedup': String,
-  'verbose': Boolean
+  'verbose': Boolean,
+  'browser':Boolean
 }
 var shortHands = {
   'h': ['--help'],
   'r': ['--root'],
-  'v': ['--verbose']
+  'v': ['--verbose'],
+  'b':['--browser']
 }
 
 function deepcopy (o) {
@@ -76,16 +78,14 @@ configLib.config(suiteRoot, function (err, config) {
     }
     process.exit(0)
   }
-
   var experiment = {}
   if (parsed['input-size']) {
     experiment['input-size'] = parsed['input-size']
-    parsed.experiment = experiment
+    parsed.experiment = experiment;
   }
   configLib.extractShortNames(config, parsed)
 
   var runs = []
-
   if (parsed.run) {
     runs = parsed.run
   } else {
@@ -131,7 +131,7 @@ configLib.config(suiteRoot, function (err, config) {
   var dashes = '---------------------------------'
 
   var isSelected = configLib.createConfigFilter(config, parsed)
-  var results = {}
+  var results = {};
   runs.forEach(function (runPath) {
     var runConfig = deepcopy(pointer.get(config, path.join('/', runPath)))
 
@@ -139,12 +139,14 @@ configLib.config(suiteRoot, function (err, config) {
       if (!isSelected(runConfig.results[h])) {
         continue
       }
-
+      var cpuLoads = (runConfig.results[h].cpuAvgLoad)?runConfig.results[h].cpuAvgLoad.map(function(cpuRunLoad){return cpuRunLoad;}):[];
       // Concatenate multiple time results for the same configuration in different runs
       if (results.hasOwnProperty(h)) {
-        results[h].times = results[h].times.concat(runConfig.results[h].times)
-      } else {
+        results[h].times = results[h].times.concat(runConfig.results[h].times);
+        results[h].cpuAvgLoad = results[h].cpuAvgLoad.concat(cpuLoads);
+    } else {
         results[h] = runConfig.results[h]
+        results[h].cpuAvgLoad = cpuLoads;
       }
     }
   })
@@ -166,7 +168,7 @@ configLib.config(suiteRoot, function (err, config) {
     keys.platforms[results[h].platform['short-name']] = true
     keys.environments[results[h].environment['short-name']] = true
     keys['input-sizes'][results[h].experiment['input-size']] = true
-
+    results[h]['mean-cpu-load']= (results[h].cpuAvgLoad.length>0)?math.mean(results[h].cpuAvgLoad):0;
     results[h]['mean-time'] = math.mean(results[h].times)
     results[h]['std-time'] = math.std(results[h].times)
     results[h]['max-time'] = math.max(results[h].times)
@@ -193,7 +195,7 @@ configLib.config(suiteRoot, function (err, config) {
   lines.slice(1).forEach((line) => {
     console.log(format(line, maxLengths))
   })
-
+  var invar = lines;
   var names = []
   Object.keys(variants).forEach(function (n) {
     names.push(n.slice(0, -1))
@@ -211,7 +213,7 @@ configLib.config(suiteRoot, function (err, config) {
       console.log('    slowdown = mean-time / (reference mean-time)')
     }
   } else {
-    lines = [names.concat(['mean', 'std', 'min', 'max', 'repetitions'])]
+    lines = [names.concat(['mean', 'std', 'min', 'max', 'repetitions','cpu-load'])]
   }
 
   var categories = ([['benchmarks', 'benchmark', 'short-name'],
@@ -322,6 +324,7 @@ configLib.config(suiteRoot, function (err, config) {
       line.push(runConfig['min-time'].toFixed(4) + 's')
       line.push(runConfig['max-time'].toFixed(4) + 's')
       line = line.concat(runConfig.times.length)
+      line.push((runConfig['mean-cpu-load']==0)?'N/A':runConfig['mean-cpu-load'].toFixed(2)+'%');
     }
 
     lines.push(line)
@@ -333,14 +336,21 @@ configLib.config(suiteRoot, function (err, config) {
   console.log('### Results ###')
   console.log()
   console.log(format(lines[0], maxLengths))
-  underlines(maxLengths)
-  lines.slice(1).forEach(function (line) {
+  underlines(maxLengths);
+
+  //Sorting by first column
+  var lines2 = lines.slice(1).sort(function(a,b)
+  {
+    if(a[0]>b[0])return 1;
+    else if(a[0]<b[0]) return -1;
+    else return 0;
+  });
+
+  lines2.forEach(function (line) {
     console.log(format(line, maxLengths))
   })
-  console.log()
-
+  
   // Summary
-
   if (parsed.plot) {
     var setupPath = path.join(suiteRoot, '.wu', 'setup.json')
     var setupPlotly = JSON.parse(fs.readFileSync(setupPath)).plotly
