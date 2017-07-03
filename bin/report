@@ -250,7 +250,7 @@ configLib.config(suiteRoot, function (err, config) {
     // Select all results that correspond to the reference
     a.forEach(function (runConfig) {
       // Skip results that are not from the reference
-      for (var i = 0 i < referenceInvariantCategories.length ++i) {
+      for (var i = 0; i < referenceInvariantCategories.length; ++i) {
         var c = referenceInvariantCategories[i]
         if (referenceValues.indexOf(runConfig[c[1]][c[2]]) === -1) {
           return
@@ -300,7 +300,7 @@ configLib.config(suiteRoot, function (err, config) {
 
     if (parsed.speedup || parsed.slowdown) {
       // Filter out results used as reference
-      for (var i = 0 i < referenceValues.length ++i) {
+      for (var i = 0; i < referenceValues.length; ++i) {
         if (line.indexOf(referenceValues[i]) >= 0) {
           return
         }
