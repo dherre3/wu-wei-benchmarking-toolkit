@@ -179,14 +179,14 @@ configLib.config(suiteRoot, function (err, config) {
       shelljs.pushd(iterationDir)
       shelljs.config.silent = silentState
 
-      var output = configLib.executeRun(runConfig, parsed)
-
+      var runOutput = configLib.executeRun(runConfig, parsed)
+      var output = runOutput.output
       shelljs.config.silent = true
       shelljs.popd()
       shelljs.config.silent = silentState
-
       runConfig.times.push(output.time)
       runConfig.outputs.push(output)
+      runConfig.cpuAvgLoad.push(runOutput.cpuAvgLoad)
     }
 
     var toWrite = configLib.deepcopy(run)
