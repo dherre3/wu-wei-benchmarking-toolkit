@@ -1,13 +1,13 @@
 #!/usr/bin/env node
-var nopt = require('nopt');
-var path = require('path');
-var configLib = require(path.join(__dirname, '../lib/config'));
-var pointer = require('json-pointer');
-var extend = require('extend');
-var noptUsage = require('nopt-usage');
-var math = require('mathjs');
-var fs = require('fs');
-var shelljs = require('shelljs');
+var nopt = require('nopt')
+var path = require('path')
+var configLib = require(path.join(__dirname, '../lib/config'))
+var pointer = require('json-pointer')
+var extend = require('extend')
+var noptUsage = require('nopt-usage')
+var math = require('mathjs')
+var fs = require('fs')
+var shelljs = require('shelljs')
 
 var knownOpts = {
   'csv': Boolean,
@@ -20,34 +20,34 @@ var knownOpts = {
   'speedup': String,
   'verbose': Boolean,
   'browser':Boolean
-};
+}
 var shortHands = {
   'h': ['--help'],
   'r': ['--root'],
   'v': ['--verbose'],
   'b':['--browser']
-};
+}
 
 function deepcopy (o) {
   if (Array.prototype.isPrototypeOf(o)) {
-    return extend(true, [], o);
+    return extend(true, [], o)
   } else {
-    return extend(true, {}, o);
+    return extend(true, {}, o)
   }
 }
 
-var parsed = nopt(knownOpts, shortHands);
+var parsed = nopt(knownOpts, shortHands)
 if (!parsed.root) {
-  console.log('fatal: No benchmarking suite root directory provided');
-  process.exit(1);
+  console.log('fatal: No benchmarking suite root directory provided')
+  process.exit(1)
 } else {
-  var suiteRoot = path.resolve(process.cwd(), parsed.root);
+  var suiteRoot = path.resolve(process.cwd(), parsed.root)
 }
 
 configLib.config(suiteRoot, function (err, config) {
   if (err) {
-    console.log(err);
-    process.exit(1);
+    console.log(err)
+    process.exit(1)
   }
 
   var description = {
@@ -57,99 +57,99 @@ configLib.config(suiteRoot, function (err, config) {
     'speedup': 'Compute speedup ratio compared to the given reference',
     'slowdown': 'Compute slowdown ratio compard to the given reference',
     'verbose': 'Show results from intermediary stages'
-  };
+  }
 
   if (parsed.help) {
-    console.log('usage: report [options] [short-name [short-name ...]]\n');
+    console.log('usage: report [options] [short-name [short-name ...]]\n')
     console.log(
       'Report the aggregated results from multiple runs. \n' +
       'Specify short-name(s) of artifacts to only report results\n' +
-      'that match at least one name in each corresponding category.\n');
-    console.log('positional arguments: ');
-    console.log("  short-name\t\tartifact's short-name. ");
-    console.log('');
-    console.log('optional arguments:');
-    var usage = noptUsage(knownOpts, shortHands, description);
-    console.log(usage);
+      'that match at least one name in each corresponding category.\n')
+    console.log('positional arguments: ')
+    console.log("  short-name\t\tartifact's short-name. ")
+    console.log('')
+    console.log('optional arguments:')
+    var usage = noptUsage(knownOpts, shortHands, description)
+    console.log(usage)
 
     if (parsed.verbose) {
-      console.log('Provided options: ');
-      console.log(JSON.stringify(parsed));
+      console.log('Provided options: ')
+      console.log(JSON.stringify(parsed))
     }
-    process.exit(0);
+    process.exit(0)
   }
-  var experiment = {};
+  var experiment = {}
   if (parsed['input-size']) {
-    experiment['input-size'] = parsed['input-size'];
-    parsed.experiment = experiment;
+    experiment['input-size'] = parsed['input-size']
+    parsed.experiment = experiment
   }
-  configLib.extractShortNames(config, parsed);
+  configLib.extractShortNames(config, parsed)
 
-  var runs = [];
+  var runs = []
   if (parsed.run) {
-    runs = parsed.run;
+    runs = parsed.run
   } else {
     // Defaults to all runs
     for (var t in config.runs) {
       if (t !== 'latest') {
-        runs.push('runs/' + t);
+        runs.push('runs/' + t)
       }
     }
   }
 
   function computeMaxLengths (lines) {
     // Align output
-    var maxLengths = lines[0].map(function (x) { return String(x).length; });
+    var maxLengths = lines[0].map(function (x) { return String(x).length })
     lines.forEach(function (line) {
       line.forEach(function (x, i) {
-        var s = String(x);
+        var s = String(x)
         if (s.length > maxLengths[i]) {
-          maxLengths[i] = s.length;
+          maxLengths[i] = s.length
         }
-      });
-    });
-    return maxLengths;
+      })
+    })
+    return maxLengths
   }
 
   function format (line, maxLengths) {
-    var delim = '|';
+    var delim = '|'
     return delim + ' ' + line.map(function (x, i) {
-      var s = String(x);
-      var diff = maxLengths[i] - s.length;
-      return s + spaces.slice(0, diff);
-    }).join(' ' + delim + ' ') + ' ' + delim;
+      var s = String(x)
+      var diff = maxLengths[i] - s.length
+      return s + spaces.slice(0, diff)
+    }).join(' ' + delim + ' ') + ' ' + delim
   }
 
   function underlines (maxLengths) {
     // Underlines
     console.log(format(lines[0].map(function (x, i) {
-      return dashes.slice(0, maxLengths[i]);
-    }), maxLengths));
+      return dashes.slice(0, maxLengths[i])
+    }), maxLengths))
   }
 
-  var spaces = '                                 ';
-  var dashes = '---------------------------------';
+  var spaces = '                                 '
+  var dashes = '---------------------------------'
 
-  var isSelected = configLib.createConfigFilter(config, parsed);
-  var results = {};
+  var isSelected = configLib.createConfigFilter(config, parsed)
+  var results = {}
   runs.forEach(function (runPath) {
-    var runConfig = deepcopy(pointer.get(config, path.join('/', runPath)));
+    var runConfig = deepcopy(pointer.get(config, path.join('/', runPath)))
 
     for (var h in runConfig.results) {
       if (!isSelected(runConfig.results[h])) {
-        continue;
+        continue
       }
-      var cpuLoads = (runConfig.results[h].cpuAvgLoad)?runConfig.results[h].cpuAvgLoad.map(function(cpuRunLoad){return cpuRunLoad;}):[];
+      var cpuLoads = (runConfig.results[h].cpuAvgLoad)?runConfig.results[h].cpuAvgLoad.map(function(cpuRunLoad){return cpuRunLoad}):[]
       // Concatenate multiple time results for the same configuration in different runs
       if (results.hasOwnProperty(h)) {
-        results[h].times = results[h].times.concat(runConfig.results[h].times);
-        results[h].cpuAvgLoad = results[h].cpuAvgLoad.concat(cpuLoads);
+        results[h].times = results[h].times.concat(runConfig.results[h].times)
+        results[h].cpuAvgLoad = results[h].cpuAvgLoad.concat(cpuLoads)
     } else {
-        results[h] = runConfig.results[h];
-        results[h].cpuAvgLoad = cpuLoads;
+        results[h] = runConfig.results[h]
+        results[h].cpuAvgLoad = cpuLoads
       }
     }
-  });
+  })
 
   var keys = {
     'benchmarks': {},
@@ -158,62 +158,62 @@ configLib.config(suiteRoot, function (err, config) {
     'platforms': {},
     'environments': {},
     'input-sizes': {}
-  };
-
-  var a = [];
-  for (var h in results) {
-    keys.benchmarks[results[h].benchmark['short-name']] = true;
-    keys.implementations[results[h].implementation['short-name']] = true;
-    keys.compilers[results[h].compiler['short-name']] = true;
-    keys.platforms[results[h].platform['short-name']] = true;
-    keys.environments[results[h].environment['short-name']] = true;
-    keys['input-sizes'][results[h].experiment['input-size']] = true;
-    results[h]['mean-cpu-load']= (results[h].cpuAvgLoad.length>0)?math.mean(results[h].cpuAvgLoad):0;
-    results[h]['mean-time'] = math.mean(results[h].times);
-    results[h]['std-time'] = math.std(results[h].times);
-    results[h]['max-time'] = math.max(results[h].times);
-    results[h]['min-time'] = math.min(results[h].times);
-    a.push(results[h]);
   }
 
-  console.log('### Invariants (configuration parameters that are the same for all runs) ###');
-  console.log();
-  var invariants = {};
-  var variants = {};
-  var lines = [['category', 'short-name']];
+  var a = []
+  for (var h in results) {
+    keys.benchmarks[results[h].benchmark['short-name']] = true
+    keys.implementations[results[h].implementation['short-name']] = true
+    keys.compilers[results[h].compiler['short-name']] = true
+    keys.platforms[results[h].platform['short-name']] = true
+    keys.environments[results[h].environment['short-name']] = true
+    keys['input-sizes'][results[h].experiment['input-size']] = true
+    results[h]['mean-cpu-load']= (results[h].cpuAvgLoad.length>0)?math.mean(results[h].cpuAvgLoad):0
+    results[h]['mean-time'] = math.mean(results[h].times)
+    results[h]['std-time'] = math.std(results[h].times)
+    results[h]['max-time'] = math.max(results[h].times)
+    results[h]['min-time'] = math.min(results[h].times)
+    a.push(results[h])
+  }
+
+  console.log('### Invariants (configuration parameters that are the same for all runs) ###')
+  console.log()
+  var invariants = {}
+  var variants = {}
+  var lines = [['category', 'short-name']]
   for (var k in keys) {
     if (Object.keys(keys[k]).length === 1) {
-      invariants[k] = true;
-      lines.push([k.slice(0, -1), Object.keys(keys[k])]);
+      invariants[k] = true
+      lines.push([k.slice(0, -1), Object.keys(keys[k])])
     } else {
-      variants[k] = true;
+      variants[k] = true
     }
   }
-  var maxLengths = computeMaxLengths(lines);
-  console.log(format(lines[0], maxLengths));
-  underlines(maxLengths);
+  var maxLengths = computeMaxLengths(lines)
+  console.log(format(lines[0], maxLengths))
+  underlines(maxLengths)
   lines.slice(1).forEach(function(line){
-    console.log(format(line, maxLengths));
-  });
-  var invar = lines;
-  var names = [];
+    console.log(format(line, maxLengths))
+  })
+  var invar = lines
+  var names = []
   Object.keys(variants).forEach(function (n) {
-    names.push(n.slice(0, -1));
-  });
+    names.push(n.slice(0, -1))
+  })
 
-  var lines = [];
+  var lines = []
   if (parsed.speedup || parsed.slowdown) {
-    console.log('Ratio:');
+    console.log('Ratio:')
 
     if (parsed.speedup) {
-      lines = [names.concat(['speedup'])];
-      console.log('    speedup = (reference mean-time) / mean-time');
+      lines = [names.concat(['speedup'])]
+      console.log('    speedup = (reference mean-time) / mean-time')
     } else {
-      lines = [names.concat(['slowdown'])];
-      console.log('    slowdown = mean-time / (reference mean-time)');
+      lines = [names.concat(['slowdown'])]
+      console.log('    slowdown = mean-time / (reference mean-time)')
     }
   } else {
-    lines = [names.concat(['mean', 'std', 'min', 'max', 'repetitions','cpu-load'])];
+    lines = [names.concat(['mean', 'std', 'min', 'max', 'repetitions','cpu-load'])]
   }
 
   var categories = ([['benchmarks', 'benchmark', 'short-name'],
@@ -223,135 +223,135 @@ configLib.config(suiteRoot, function (err, config) {
     ['environments', 'environment', 'short-name'],
     ['input-sizes', 'experiment', 'input-size']])
     .filter(function (c) {
-      return variants[c[0]];
-    });
+      return variants[c[0]]
+    })
 
-  var getReferenceValue = function () {};
+  var getReferenceValue = function () {}
   if (parsed.speedup || parsed.slowdown) {
-    var reference = {};
-    var referenceValues = (parsed.speedup? parsed.speedup:parsed.slowdown).split(',');
+    var reference = {}
+    var referenceValues = (parsed.speedup? parsed.speedup:parsed.slowdown).split(',')
     var referenceCategories = referenceValues
       .map(function (n) {
-        return configLib.getShortNameCategory(config, n);
-      });
-    console.log('Reference (used for computing the ratio): ');
+        return configLib.getShortNameCategory(config, n)
+      })
+    console.log('Reference (used for computing the ratio): ')
     referenceCategories.forEach(function (c, i) {
-      console.log('    ' + c + ': ' + referenceValues[i]);
-    });
+      console.log('    ' + c + ': ' + referenceValues[i])
+    })
     var referenceInvariantCategories = categories
       .filter(function (c) {
-        return referenceCategories.indexOf(c[1]) >= 0;
-      });
+        return referenceCategories.indexOf(c[1]) >= 0
+      })
     var referenceVariantCategories = categories
       .filter(function (c) {
-        return referenceCategories.indexOf(c[1]) === -1;
-      });
+        return referenceCategories.indexOf(c[1]) === -1
+      })
 
     // Select all results that correspond to the reference
     a.forEach(function (runConfig) {
       // Skip results that are not from the reference
-      for (var i = 0; i < referenceInvariantCategories.length; ++i) {
-        var c = referenceInvariantCategories[i];
+      for (var i = 0 i < referenceInvariantCategories.length ++i) {
+        var c = referenceInvariantCategories[i]
         if (referenceValues.indexOf(runConfig[c[1]][c[2]]) === -1) {
-          return;
+          return
         }
       }
       var values = referenceVariantCategories.map(function (c) {
-        return runConfig[c[1]][c[2]];
-      });
+        return runConfig[c[1]][c[2]]
+      })
       pointer.set(
         reference,
         '/' + path.join.apply(null, values),
-        runConfig['mean-time']);
-    });
+        runConfig['mean-time'])
+    })
     getReferenceValue = function (reference, runConfig) {
       var values = referenceVariantCategories.map(function (c) {
-        return runConfig[c[1]][c[2]];
-      });
-      var pointerPath = '/' + path.join.apply(null, values);
+        return runConfig[c[1]][c[2]]
+      })
+      var pointerPath = '/' + path.join.apply(null, values)
 
       if (!pointer.has(reference, pointerPath)) {
         console.log('Ratio computation error (speedup or slowdown): no reference value found for [' +
           referenceValues.map(function (v, i) {
-            return referenceCategories[i] + '=' + v;
+            return referenceCategories[i] + '=' + v
           }) +
           '] with additional values [' +
           values.map(function (v, i) {
-            return referenceVariantCategories[i][1] + '=' + v;
+            return referenceVariantCategories[i][1] + '=' + v
           }) + '].' +
           ' Provide a more specific reference to compute the ratio by providing additional values from at least one of those categories [' +
           referenceVariantCategories
             .map(function (c) {
-              return c[1];
+              return c[1]
             }) +
-          ']');
-        process.exit(1);
+          ']')
+        process.exit(1)
       }
-      return pointer.get(reference, pointerPath);
-    };
+      return pointer.get(reference, pointerPath)
+    }
   }
 
   a.forEach(function (runConfig) {
-    var line = [];
+    var line = []
 
     categories.forEach(function (c) {
-      line.push(runConfig[c[1]][c[2]]);
-    });
+      line.push(runConfig[c[1]][c[2]])
+    })
 
     if (parsed.speedup || parsed.slowdown) {
       // Filter out results used as reference
-      for (var i = 0; i < referenceValues.length; ++i) {
+      for (var i = 0 i < referenceValues.length ++i) {
         if (line.indexOf(referenceValues[i]) >= 0) {
-          return;
+          return
         }
       }
     }
 
-    var meanTime = runConfig['mean-time'];
-    var ratio;
+    var meanTime = runConfig['mean-time']
+    var ratio
     if (parsed.speedup) {
-      ratio = getReferenceValue(reference, runConfig) / runConfig['mean-time'];
-      line.push(ratio.toFixed(2) + 'x');
+      ratio = getReferenceValue(reference, runConfig) / runConfig['mean-time']
+      line.push(ratio.toFixed(2) + 'x')
     } else if (parsed.slowdown) {
-      ratio = runConfig['mean-time'] / getReferenceValue(reference, runConfig);
-      line.push(ratio.toFixed(2) + 'x');
+      ratio = runConfig['mean-time'] / getReferenceValue(reference, runConfig)
+      line.push(ratio.toFixed(2) + 'x')
     } else {
-      var stdTime = runConfig['std-time'];
-      line.push(meanTime.toFixed(4) + 's');
-      line.push('+-' + (stdTime / meanTime * 100).toFixed(2) + '%');
-      line.push(runConfig['min-time'].toFixed(4) + 's');
-      line.push(runConfig['max-time'].toFixed(4) + 's');
-      line = line.concat(runConfig.times.length);
-      line.push((runConfig['mean-cpu-load']===0)?'N/A':runConfig['mean-cpu-load'].toFixed(2)+'%');
+      var stdTime = runConfig['std-time']
+      line.push(meanTime.toFixed(4) + 's')
+      line.push('+-' + (stdTime / meanTime * 100).toFixed(2) + '%')
+      line.push(runConfig['min-time'].toFixed(4) + 's')
+      line.push(runConfig['max-time'].toFixed(4) + 's')
+      line = line.concat(runConfig.times.length)
+      line.push((runConfig['mean-cpu-load']===0)?'N/A':runConfig['mean-cpu-load'].toFixed(2)+'%')
     }
 
-    lines.push(line);
-  });
-  console.log();
+    lines.push(line)
+  })
+  console.log()
 
   // Header
-  var maxLengths = computeMaxLengths(lines);
-  console.log('### Results ###');
-  console.log();
-  console.log(format(lines[0], maxLengths));
-  underlines(maxLengths);
+  var maxLengths = computeMaxLengths(lines)
+  console.log('### Results ###')
+  console.log()
+  console.log(format(lines[0], maxLengths))
+  underlines(maxLengths)
 
   //Sorting by first column
   var lines2 = lines.slice(1).sort(function(a,b)
   {
-    if(a[0]>b[0])return 1;
-    else if(a[0]<b[0]) return -1;
-    else return 0;
-  });
+    if(a[0]>b[0])return 1
+    else if(a[0]<b[0]) return -1
+    else return 0
+  })
 
   lines2.forEach(function (line) {
-    console.log(format(line, maxLengths));
-  });
+    console.log(format(line, maxLengths))
+  })
   
   // Summary
   if (parsed.plot) {
-    var setupPath = path.join(suiteRoot, '.wu', 'setup.json');
-    var setupPlotly = JSON.parse(fs.readFileSync(setupPath)).plotly;
+    var setupPath = path.join(suiteRoot, '.wu', 'setup.json')
+    var setupPlotly = JSON.parse(fs.readFileSync(setupPath)).plotly
 
     /*
     if (!setupPlotly || !setupPlotly.username || !setupPlotly.apiKey) {
@@ -366,19 +366,19 @@ configLib.config(suiteRoot, function (err, config) {
     }
     */
 
-    var data = {};
+    var data = {}
 
     a.forEach(function (runConfig) {
       var boxGroup = categories
         .filter(function (c) {
-          return c[1] !== 'benchmark';
+          return c[1] !== 'benchmark'
         })
         .map(function (c) {
-          return runConfig[c[1]][c[2]];
+          return runConfig[c[1]][c[2]]
         })
-        .join('-');
+        .join('-')
 
-      var benchmarkName = runConfig.benchmark['short-name'];
+      var benchmarkName = runConfig.benchmark['short-name']
       if (!data.hasOwnProperty(boxGroup)) {
         data[boxGroup] = {
           y: [],
@@ -389,15 +389,15 @@ configLib.config(suiteRoot, function (err, config) {
           pointpos: -1.8,
           type: 'box',
           boxmean: 'sd'
-        };
+        }
       }
 
-      data[boxGroup].y = data[boxGroup].y.concat(runConfig.times);
+      data[boxGroup].y = data[boxGroup].y.concat(runConfig.times)
       data[boxGroup].x = data[boxGroup].x.concat(runConfig.times
         .map(function (t) {
-          return benchmarkName;
-        }));
-    });
+          return benchmarkName
+        }))
+    })
 
     var graphOptions = {
       filename: 'timing-results-2',
@@ -407,13 +407,13 @@ configLib.config(suiteRoot, function (err, config) {
       yaxis: {
         title: 'Running time (s)'
       }
-    };
+    }
 
     data = Object.keys(data).map(function (k) {
-        return data[k];
-      });
+        return data[k]
+      })
 
-    console.log(JSON.stringify(data, null, '  '));
+    console.log(JSON.stringify(data, null, '  '))
 
     /*
     plotly.plot(
@@ -424,17 +424,17 @@ configLib.config(suiteRoot, function (err, config) {
       })
     */
 
-    var reportDirPath = path.join(suiteRoot, 'reports', configLib.computeDirectoryName(a));
-    var htmlReportPath = path.join(reportDirPath, 'report.html');
-    var htmlReport = configLib.createPlotlyReportPage(data, graphOptions);
+    var reportDirPath = path.join(suiteRoot, 'reports', configLib.computeDirectoryName(a))
+    var htmlReportPath = path.join(reportDirPath, 'report.html')
+    var htmlReport = configLib.createPlotlyReportPage(data, graphOptions)
 
-    var silentState = shelljs.config.silent;
-    shelljs.config.silent = true;
-    shelljs.mkdir('-p', reportDirPath);
-    shelljs.pushd(reportDirPath);
-    fs.writeFileSync(htmlReportPath, htmlReport);
-    shelljs.config.silent = silentState;
+    var silentState = shelljs.config.silent
+    shelljs.config.silent = true
+    shelljs.mkdir('-p', reportDirPath)
+    shelljs.pushd(reportDirPath)
+    fs.writeFileSync(htmlReportPath, htmlReport)
+    shelljs.config.silent = silentState
 
-    console.log(htmlReportPath);
+    console.log(htmlReportPath)
   }
-});
+})
