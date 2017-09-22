@@ -1,0 +1,17 @@
+{
+    "short-name": "",
+    "type": "platform",
+    "name": "Darwin-16.0.0-x86_64-i386-64bit",
+    "cpu": "Intel Core i5",
+    "gpu": "Intel Iris",
+    "memory": "8 GB",
+    "os": "Mac OS X 10.12",
+    "supported-languages": [
+        "x86_64"
+    ],
+    "supported-formats": [
+        "binary"
+    ],
+    "environments": [],
+    "location": "/Users/davidherrera/Documents/Research/repos-wu-wei/wu-wei-benchmarking-toolkit/platforms"
+}

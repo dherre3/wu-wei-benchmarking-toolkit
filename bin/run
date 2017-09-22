@@ -140,6 +140,7 @@ configLib.config(suiteRoot, function (err, config) {
   runConfigs.forEach(function (runConfig) {
     runConfig.times = []
     runConfig.outputs = []
+    runConfig.cpuAvgLoad = []
 
     console.log('-------------- ' + runConfig.benchmark['short-name'] +
       ',' + runConfig.implementation['short-name'] +
